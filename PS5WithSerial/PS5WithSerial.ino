@@ -9,7 +9,7 @@
 #define motor2 13
 #define motor3 27
 #define motor4 22
-
+bool squarePressed = false;
 void setup() {
   Serial.begin(115200);
   Serial2.begin(9600);
@@ -64,13 +64,20 @@ void loop() {
       Serial.println("MOVING RIGHT");
     }
     if (ps5.Square()) {
-      Serial2.print('1');
-      Serial.println("Sent 1");
+      squarePressed = !squarePressed;
+      if (squarePressed) {
+        Serial1.write('1');
+        Serial.println("Square pressed: 1 sent");
+      } else {
+        Serial1.write('0');
+        Serial.println("Square pressed again: 0 sent");
+      }
+      delay(300); // Debounce delay to prevent multiple toggles from a single press
     }
-    if (ps5.Cross()) {
-      Serial2.print('0');
-      Serial.println("Sent 0");
-    }
+    // if (ps5.Cross()) {
+    //   Serial2.print('0');
+    //   Serial.println("Sent 0");
+    // }
     // if (ps5.Circle()) Serial.println("Circle Button");
     // if (ps5.Triangle()) Serial.println("Triangle Button");
 
