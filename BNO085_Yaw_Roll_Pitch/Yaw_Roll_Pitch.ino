@@ -1,8 +1,20 @@
 #include <Arduino.h>
+// This demo explores two reports (SH2_ARVR_STABILIZED_RV and SH2_GYRO_INTEGRATED_RV) both can be used to give
+// quartenion and euler (yaw, pitch roll) angles.  Toggle the FAST_MODE define to see other report.
+// Note sensorValue.status gives calibration accuracy (which improves over time)
 #include <Adafruit_BNO08x.h>
 
-// For I2C mode, define the I2C address
-#define BNO08X_ADDRESS 0x4A  // Default I2C address for BNO085
+// For SPI mode, we need a CS pin
+#define BNO08X_CS 10
+#define BNO08X_INT 9
+
+
+// #define FAST_MODE
+
+// For SPI mode, we also need a RESET
+//#define BNO08X_RESET 5
+// but not for I2C or UART
+#define BNO08X_RESET -1
 
 struct euler_t {
   float yaw;
@@ -10,13 +22,23 @@ struct euler_t {
   float roll;
 } ypr;
 
-Adafruit_BNO08x bno08x;
-
+Adafruit_BNO08x bno08x(BNO08X_RESET);
 sh2_SensorValue_t sensorValue;
 
+#ifdef FAST_MODE
+// Top frequency is reported to be 1000Hz (but freq is somewhat variable)
+sh2_SensorId_t reportType = SH2_GYRO_INTEGRATED_RV;
+long reportIntervalUs = 2000;
+#else
 // Top frequency is about 250Hz but this report is more accurate
 sh2_SensorId_t reportType = SH2_ARVR_STABILIZED_RV;
 long reportIntervalUs = 5000;
+#endif
+
+bool firstRef = false;
+float Reference_Yaw;
+float diff_Yaw;
+
 
 void setReports(sh2_SensorId_t reportType, long report_interval) {
   Serial.println("Setting desired reports");
@@ -26,19 +48,21 @@ void setReports(sh2_SensorId_t reportType, long report_interval) {
 }
 
 void setup(void) {
+
   Serial.begin(115200);
   while (!Serial) delay(10);  // will pause Zero, Leonardo, etc until serial console opens
 
   Serial.println("Adafruit BNO08x test!");
 
-  // Initialize the BNO08x sensor using I2C
-  if (!bno08x.begin_I2C(BNO08X_ADDRESS)) {
+  // Try to initialize!
+  if (!bno08x.begin_I2C()) {
+    //if (!bno08x.begin_UART(&Serial1)) {  // Requires a device with > 300 byte UART buffer!
+    //if (!bno08x.begin_SPI(BNO08X_CS, BNO08X_INT)) {
     Serial.println("Failed to find BNO08x chip");
-    while (1) {
-      delay(10);
-    }
+    while (1) { delay(10); }
   }
   Serial.println("BNO08x Found!");
+
 
   setReports(reportType, reportIntervalUs);
 
@@ -47,6 +71,7 @@ void setup(void) {
 }
 
 void quaternionToEuler(float qr, float qi, float qj, float qk, euler_t* ypr, bool degrees = false) {
+
   float sqr = sq(qr);
   float sqi = sq(qi);
   float sqj = sq(qj);
@@ -72,33 +97,43 @@ void quaternionToEulerGI(sh2_GyroIntegratedRV_t* rotational_vector, euler_t* ypr
 }
 
 void loop() {
+
   if (bno08x.wasReset()) {
-    Serial.print("Sensor was reset ");
+    Serial.print("sensor was reset ");
     setReports(reportType, reportIntervalUs);
   }
 
   if (bno08x.getSensorEvent(&sensorValue)) {
+    // in this demo only one report type will be received depending on FAST_MODE define (above)
     switch (sensorValue.sensorId) {
       case SH2_ARVR_STABILIZED_RV:
         quaternionToEulerRV(&sensorValue.un.arvrStabilizedRV, &ypr, true);
-        break;
       case SH2_GYRO_INTEGRATED_RV:
+        // faster (more noise?)
         quaternionToEulerGI(&sensorValue.un.gyroIntegratedRV, &ypr, true);
         break;
     }
-
     static long last = 0;
     long now = micros();
-    Serial.print(now - last);
-    Serial.print("\t");
     last = now;
-    Serial.print(sensorValue.status);
-    Serial.print("\t");  // This is accuracy in the range of 0 to 3
-    Serial.print("Yaw: ");
-    Serial.print(ypr.yaw);
-    Serial.print("\tPitch: ");
-    Serial.print(ypr.pitch);
-    Serial.print("\tRoll: ");
-    Serial.println(ypr.roll);
+    if (!firstRef) {
+      Reference_Yaw = ypr.yaw;
+      firstRef = true;
+    }
+    Serial.print("Reference Yaw: ");
+    Serial.println(Reference_Yaw);
+    Serial.print("Current Yaw: ");
+    Serial.println(ypr.yaw);
+    diff_Yaw = fabs(Reference_Yaw) - fabs(ypr.yaw);
+    if (ypr.yaw > Reference_Yaw + 5) {
+      Serial.print("Distance On Left: ");
+      Serial.print(fabs(diff_Yaw));
+      Serial.println();
+
+    } else if (ypr.yaw < Reference_Yaw - 5) {
+      Serial.print("Distance On Right: ");
+      Serial.print(fabs(diff_Yaw));
+      Serial.println();
+    }
   }
 }
