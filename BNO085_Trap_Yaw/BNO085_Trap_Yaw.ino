@@ -52,8 +52,8 @@ float diff_Yaw;
 #define motor4 12  //Forward Right
 
 // Encoder pins
-#define encoderY_A 34
-#define encoderY_B 35
+#define encoderY_A 23
+#define encoderY_B 2
 #define encoderX_A 5
 #define encoderX_B 26
 
@@ -236,6 +236,11 @@ void loop() {
   Serial.print(Anti_ClockWise_Diag_Speed);
   Serial.println();
   setMotorSpeedForward_2_4(Anti_ClockWise_Diag_Speed);
+  }
+  if(!Anti_ClockWise & !ClockWise){
+  Serial.println("GOing Straight");
+  setMotorSpeedForward_1_3(speed);
+  setMotorSpeedForward_2_4(speed);
   }
   delay(100);
   // setMotorSpeedForward_2_4()
