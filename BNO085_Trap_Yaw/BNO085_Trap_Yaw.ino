@@ -230,12 +230,14 @@ void loop() {
   Serial.print(ClockWise_Diag_Speed);
   Serial.println();
   setMotorSpeedForward_1_3(ClockWise_Diag_Speed);
+  setMotorSpeedForward_2_4(speed);
   }
   if(Anti_ClockWise){
   Serial.print("Anti ClockWise_Diag_Speed : ");
   Serial.print(Anti_ClockWise_Diag_Speed);
   Serial.println();
   setMotorSpeedForward_2_4(Anti_ClockWise_Diag_Speed);
+  setMotorSpeedForward_1_3(speed);
   }
   if(!Anti_ClockWise & !ClockWise){
   Serial.println("GOing Straight");
