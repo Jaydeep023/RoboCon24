@@ -240,7 +240,7 @@ void loop() {
   if (consider_bno) {
     if (flag_motor_1) {
       if (right) {
-        motor_control_1(speed, speed);
+        motor_control_1(speed,0);
       }
       if (left) {
         motor_control_1(speed, speed - 10);
@@ -254,7 +254,7 @@ void loop() {
         motor_control_2(speed, -10);
       }
       if (left) {
-        motor_control_2(speed, speed);
+        motor_control_2(speed,0);
       }
       if (!left & !right) {
         motor_control_2(speed, -5);
