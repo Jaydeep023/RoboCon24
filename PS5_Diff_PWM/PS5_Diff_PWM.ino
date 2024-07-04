@@ -89,77 +89,26 @@ void loop() {
     if (ps5.RStickY()) {
       int rsmotor = map(ps5.RStickY(), 0, 124, 0, 150);
       if (rsmotor < 10) {
-        rsmotor = 0;
-      }
-      if (Slow_2_mtr) {
-        // analogWrite(pwm1, rsmotor);
-        // analogWrite(pwm2, rsmotor - 5);
-        // analogWrite(pwm3, rsmotor);
-        // analogWrite(pwm4, rsmotor);
-        if(rsmotor>6){
-        Serial.print(" PWM 1 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 2 : ");
-        Serial.print(rsmotor-5);
-        Serial.println();
-        Serial.print(" PWM 3 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 4 : ");
-        Serial.print(rsmotor);
-        Serial.println();        
-        }else{
-          rsmotor = 0;
-        Serial.print(" PWM 1 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 2 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 3 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 4 : ");
-        Serial.print(rsmotor);
-        Serial.println();        
-        }
-      }
-      if (Slow_1_mtr) {
-
-        // analogWrite(pwm1, rsmotor - 5);
-        // analogWrite(pwm2, rsmotor);
-        // analogWrite(pwm3, rsmotor);
-        // analogWrite(pwm4, rsmotor);
-        if(rsmotor>6){
-        Serial.print(" PWM 1 : ");
-        Serial.print(rsmotor-5);
-        Serial.println();
-        Serial.print(" PWM 2 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 3 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 4 : ");
-        Serial.print(rsmotor);
-        Serial.println();        
-        }else{
-          rsmotor = 0;
-        Serial.print(" PWM 1 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 2 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 3 : ");
-        Serial.print(rsmotor);
-        Serial.println();
-        Serial.print(" PWM 4 : ");
-        Serial.print(rsmotor);
-        Serial.println();        
-        }
+        rsmotor = 10;
       }
     }
+    if(Slow_1_mtr){
+        motor_control_1(rsmotor,-5)
+    }
+    if(Slow_2_mtr){
+        motor_control_2(rsmotor,-5)
+    }
   }
+}
+void motor_control_1(int sp, int change) {
+  analogWrite(pwm1, sp + change);
+  analogWrite(pwm2, sp);
+  analogWrite(pwm3, sp);
+  analogWrite(pwm4, sp);
+}
+void motor_control_2(int sp, int change) {
+  analogWrite(pwm1, sp);
+  analogWrite(pwm2, sp + change);
+  analogWrite(pwm3, sp);
+  analogWrite(pwm4, sp);
 }
