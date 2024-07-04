@@ -1,6 +1,6 @@
 #include <Arduino.h>
 // This demo explores two reports (SH2_ARVR_STABILIZED_RV and SH2_GYRO_INTEGRATED_RV) both can be used to give
-// quartenion and euler (yaw, pitch roll) angles.  Toggle the FAST_MODE define to see other report.
+// quaternion and euler (yaw, pitch roll) angles.  Toggle the FAST_MODE define to see other report.
 // Note sensorValue.status gives calibration accuracy (which improves over time)
 #include <Adafruit_BNO08x.h>
 #include <ps5Controller.h>
@@ -14,7 +14,6 @@
 #define motor2 13
 #define motor3 27
 #define motor4 12
-
 // For SPI mode, we need a CS pin
 #define BNO08X_CS 10
 #define BNO08X_INT 9
@@ -45,6 +44,20 @@ long reportIntervalUs = 2000;
 sh2_SensorId_t reportType = SH2_ARVR_STABILIZED_RV;
 long reportIntervalUs = 5000;
 #endif
+
+float initialYaw = 0;
+bool initialYawSet = false;
+int ref_yaw = 90;
+int yaw;
+
+bool consider_bno = true;
+bool right = false;
+bool left = false;
+int speed;
+
+bool flag_motor_1 = false;
+bool flag_motor_2 = false;
+
 void setReports(sh2_SensorId_t reportType, long report_interval) {
   Serial.println("Setting desired reports");
   if (!bno08x.enableReport(reportType, report_interval)) {
@@ -52,14 +65,11 @@ void setReports(sh2_SensorId_t reportType, long report_interval) {
   }
 }
 
-bool get_first = false;
-float reference_yaw;
-float yaw;
-
 void setup(void) {
+
   Serial.begin(115200);
   ps5.begin("48:18:8D:61:1A:E9");  //replace with MAC address of your controller
-  Serial.println("Ready.");
+  Serial.println("PS5 Ready.");
   pinMode(motor1, OUTPUT);
   pinMode(motor2, OUTPUT);
   pinMode(motor3, OUTPUT);
@@ -69,6 +79,7 @@ void setup(void) {
   pinMode(pwm2, OUTPUT);
   pinMode(pwm3, OUTPUT);
   pinMode(pwm4, OUTPUT);
+
 
   Serial.println("Adafruit BNO08x test!");
 
@@ -114,64 +125,152 @@ void quaternionToEulerGI(sh2_GyroIntegratedRV_t* rotational_vector, euler_t* ypr
   quaternionToEuler(rotational_vector->real, rotational_vector->i, rotational_vector->j, rotational_vector->k, ypr, degrees);
 }
 
+void normalizeYaw(float* yaw) {
+  // Start with an initial yaw of 90 degrees
+  *yaw -= initialYaw;
+  *yaw = 90 - *yaw;  // Adjust to start at 90 and decrease to 0 on anticlockwise rotation
+  if (*yaw > 180) *yaw -= 360;
+  if (*yaw < -180) *yaw += 360;
+}
+
 void loop() {
+
+  if (bno08x.wasReset()) {
+    Serial.print("sensor was reset ");
+    setReports(reportType, reportIntervalUs);
+  }
+
   if (bno08x.getSensorEvent(&sensorValue)) {
     // in this demo only one report type will be received depending on FAST_MODE define (above)
     switch (sensorValue.sensorId) {
       case SH2_ARVR_STABILIZED_RV:
         quaternionToEulerRV(&sensorValue.un.arvrStabilizedRV, &ypr, true);
+        break;
       case SH2_GYRO_INTEGRATED_RV:
         // faster (more noise?)
         quaternionToEulerGI(&sensorValue.un.gyroIntegratedRV, &ypr, true);
         break;
     }
-  }
-  yaw = ypr.yaw;
-  if (ypr.yaw < 0) {
-    yaw = map(ypr.yaw, -180, 0, 180, 360);
-  }
 
-  if (!get_first) {
-    reference_yaw = yaw;
-    get_first = true;
+    if (!initialYawSet) {
+      initialYaw = ypr.yaw;
+      initialYawSet = true;
+    }
+    normalizeYaw(&ypr.yaw);
+    yaw = ypr.yaw;
+    if (yaw<92 & yaw> 88) {
+      right = false;
+      left = false;
+    }
+    if (yaw > 92) {
+      right = true;
+      left = false;
+    }
+    if (yaw < 88) {
+      right = false;
+      left = true;
+    }
   }
   if (ps5.Right()) {
     digitalWrite(motor1, HIGH);
     digitalWrite(motor2, LOW);
     digitalWrite(motor3, HIGH);
     digitalWrite(motor4, LOW);
-    get_first = false;
+    bool consider_bno = true;
+    flag_motor_2 = true;
+    flag_motor_1 = false;
   }
   if (ps5.Down()) {
     digitalWrite(motor1, LOW);
     digitalWrite(motor2, LOW);
     digitalWrite(motor3, LOW);
     digitalWrite(motor4, LOW);
-    get_first = false;
+    bool consider_bno = true;
+    flag_motor_1 = true;
+    flag_motor_2 = false;
   }
   if (ps5.Up()) {
     digitalWrite(motor1, HIGH);
     digitalWrite(motor2, HIGH);
     digitalWrite(motor3, HIGH);
     digitalWrite(motor4, HIGH);
-    get_first = false;
+    bool consider_bno = true;
+    flag_motor_1 = false;
+    flag_motor_2 = true;
   }
   if (ps5.Left()) {
     digitalWrite(motor1, LOW);
     digitalWrite(motor2, HIGH);
     digitalWrite(motor3, LOW);
     digitalWrite(motor4, HIGH);
-    get_first = false;
+    bool consider_bno = true;
+    flag_motor_1 = true;
+    flag_motor_2 = false;
   }
-  if (yaw > reference_yaw + 2) {
-    //Left Tilt
-    Serial.print(" Diff_Yaw : ");
-    Serial.print(yaw - reference_yaw);
-    Serial.println();
-    if((yaw - reference_yaw)>300){
-    Serial.print(" Reverse : ");
+
+
+  if (ps5.L1()) {
+    digitalWrite(motor1, LOW);
+    digitalWrite(motor2, HIGH);
+    digitalWrite(motor3, HIGH);
+    digitalWrite(motor4, LOW);
+    analogWrite(pwm1, 50);
+    analogWrite(pwm2, 50);
+    analogWrite(pwm3, 50);
+    analogWrite(pwm4, 50);
+    bool consider_bno = false;
+  }
+  if (ps5.R1()) {
+    digitalWrite(motor1, HIGH);
+    digitalWrite(motor2, LOW);
+    digitalWrite(motor3, LOW);
+    digitalWrite(motor4, HIGH);
+    analogWrite(pwm1, 50);
+    analogWrite(pwm2, 50);
+    analogWrite(pwm3, 50);
+    analogWrite(pwm4, 50);
+    bool consider_bno = false;
+  }
+  if (ps5.RStickY()) {
+    speed = map(ps5.RStickY(), 0, 124, 0, 150);
+    if (speed < 10) {
+      speed = 10;
     }
-  } else {
-    Serial.println("Going Straight");
   }
+  if (consider_bno) {
+    if (flag_motor_1) {
+      if (right) {
+        motor_control_1(speed, speed);
+      }
+      if (left) {
+        motor_control_1(speed, speed - 10);
+      }
+      if (!left & !right) {
+        motor_control_1(speed, -5);
+      }
+    }
+    if (flag_motor_2) {
+      if (right) {
+        motor_control_2(speed, -10);
+      }
+      if (left) {
+        motor_control_2(speed, speed);
+      }
+      if (!left & !right) {
+        motor_control_2(speed, -5);
+      }
+    }
+  }
+}
+void motor_control_1(int sp, int change) {
+  analogWrite(pwm1, sp + change);
+  analogWrite(pwm2, sp);
+  analogWrite(pwm3, sp);
+  analogWrite(pwm4, sp);
+}
+void motor_control_2(int sp, int change) {
+  analogWrite(pwm1, sp);
+  analogWrite(pwm2, sp + change);
+  analogWrite(pwm3, sp);
+  analogWrite(pwm4, sp);
 }
