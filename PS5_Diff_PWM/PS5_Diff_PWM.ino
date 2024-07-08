@@ -1,17 +1,23 @@
 #include <ps5Controller.h>
 
-#define pwm1 18
-#define pwm2 19
-#define pwm3 15
-#define pwm4 25
+#define pwm1 14
+#define pwm2 27
+#define pwm3 18
+#define pwm4 15
 
-#define motor1 14
-#define motor2 13
-#define motor3 27
-#define motor4 12
+#define motor1 13
+#define motor2 25
+#define motor3 19
+#define motor4 5
 
-bool Slow_1_mtr = false;
-bool Slow_2_mtr = true;
+bool backward = false;
+bool forward = false;
+
+bool left = false;
+bool right = false;
+// bool 
+int rsmotor;
+
 
 void setup() {
   Serial.begin(115200);
@@ -37,32 +43,40 @@ void loop() {
       digitalWrite(motor2, LOW);
       digitalWrite(motor3, HIGH);
       digitalWrite(motor4, LOW);
-      Slow_2_mtr = true;
-      Slow_1_mtr = false;
+      left = false;
+      right = true;
+      backward = false;
+      forward = false;
     }
     if (ps5.Down()) {
       digitalWrite(motor1, LOW);
       digitalWrite(motor2, LOW);
       digitalWrite(motor3, LOW);
       digitalWrite(motor4, LOW);
-      Slow_2_mtr = false;
-      Slow_1_mtr = true;
+      left = false;
+      right = false;
+      backward = true;
+      forward = false;
     }
     if (ps5.Up()) {
       digitalWrite(motor1, HIGH);
       digitalWrite(motor2, HIGH);
       digitalWrite(motor3, HIGH);
       digitalWrite(motor4, HIGH);
-      Slow_2_mtr = true;
-      Slow_1_mtr = false;
+      left = false;
+      right = false;
+      backward = false;
+      forward = true;
     }
     if (ps5.Left()) {
       digitalWrite(motor1, LOW);
       digitalWrite(motor2, HIGH);
       digitalWrite(motor3, LOW);
       digitalWrite(motor4, HIGH);
-      Slow_2_mtr = false;
-      Slow_1_mtr = true;
+      left = true;
+      right = false;
+      backward = false;
+      forward = false;
     }
     if (ps5.L1()) {
       digitalWrite(motor1, LOW);
@@ -87,28 +101,59 @@ void loop() {
       Serial.println("ROTATING RIGHT");
     }
     if (ps5.RStickY()) {
-      int rsmotor = map(ps5.RStickY(), 0, 124, 0, 150);
-      if (rsmotor < 10) {
-        rsmotor = 10;
+      rsmotor = map(ps5.RStickY(), 0, 124, 0, 150);
+      if (rsmotor < 20) {
+        rsmotor = 0;
       }
     }
-    if(Slow_1_mtr){
-        motor_control_1(rsmotor,-5)
+    if(right){
+        motor_control_1(rsmotor,0);
     }
-    if(Slow_2_mtr){
-        motor_control_2(rsmotor,-5)
+    if(left){
+        motor_control_2(rsmotor,0);
     }
+    if(forward){
+        motor_control_2(rsmotor,0);
+    }
+    if(backward){
+        motor_control_3(rsmotor,0);
+    }
+    
   }
 }
 void motor_control_1(int sp, int change) {
+  if(sp<20){
+    change = 0;
+  }
   analogWrite(pwm1, sp + change);
   analogWrite(pwm2, sp);
   analogWrite(pwm3, sp);
   analogWrite(pwm4, sp);
 }
 void motor_control_2(int sp, int change) {
+  if(sp<20){
+    change = 0;
+  }
   analogWrite(pwm1, sp);
   analogWrite(pwm2, sp + change);
   analogWrite(pwm3, sp);
   analogWrite(pwm4, sp);
+}
+void motor_control_3(int sp, int change) {
+  if(sp<20){
+    change = 0;
+  }
+  analogWrite(pwm1, sp);
+  analogWrite(pwm2, sp);
+  analogWrite(pwm3, sp + change);
+  analogWrite(pwm4, sp);
+}
+void motor_control_4(int sp, int change) {
+  if(sp<20){
+    change = 0;
+  }
+  analogWrite(pwm1, sp);
+  analogWrite(pwm2, sp);
+  analogWrite(pwm3, sp);
+  analogWrite(pwm4, sp + change);
 }
