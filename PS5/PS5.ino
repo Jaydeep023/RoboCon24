@@ -1,14 +1,14 @@
 #include <ps5Controller.h>
 
-#define pwm1 18
-#define pwm2 19
-#define pwm3 15
-#define pwm4 25
+#define pwm1 14
+#define pwm2 27
+#define pwm3 18
+#define pwm4 15
 
-#define motor1 14
-#define motor2 13
-#define motor3 27
-#define motor4 12 
+#define motor1 13
+#define motor2 25
+#define motor3 19
+#define motor4 5
 
 void setup() {
   Serial.begin(115200);
